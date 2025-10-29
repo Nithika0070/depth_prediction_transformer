@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily To-Do Notes</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Great+Vibes&family=Josefin+Sans:wght@300;700&display=swap" rel="stylesheet">
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Josefin Sans', sans-serif;
+  background: linear-gradient(135deg, #093028 0%, #237A57 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 50px 20px;
+  overflow-x: hidden;
+}
+
+/* Header */
+header {
+  width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+h1 {
+  font-family: 'Great Vibes', cursive;
+  font-size: 3.5rem;
+  background: linear-gradient(to right, #6EE7B7, #3FA796, #0E9F6E);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: fadeSlideUp 1.5s ease forwards;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-family: 'Playfair Display', serif;
+  color: #E0FFE8;
+  font-size: 1.1rem;
+  opacity: 0;
+  animation: fadeIn 2s ease 1s forwards;
+}
+
+.date-label {
+  position: absolute;
+  top: 0;
+  right: 30px;
+  font-family: 'Playfair Display', serif;
+  font-weight: bold;
+  color: #C4FFD7;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 14px;
+  border-radius: 8px;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 0 8px rgba(0,0,0,0.15);
+}
+
+/* Task Container */
+.tasks-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 40px;
+  max-width: 1200px;
+}
+
+/* Task Cards */
+.task {
+  background: #f9fffa;
+  border-left: 6px solid #27ae60;
+  border-radius: 15px;
+  padding: 15px 18px;
+  width: 260px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.task:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+
+/* Expanded (clicked) task */
+.task.expanded {
+  transform: scale(1.15);
+  z-index: 20;
+  box-shadow: 0 20px 35px rgba(0,0,0,0.4);
+}
+
+.task input[type="text"],
+.task input[type="time"],
+.task textarea {
+  margin: 5px 0;
+  padding: 8px;
+  border: 1px solid #cce3d1;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Josefin Sans', sans-serif;
+  color: #094B2C;
+  width: 100%;
+}
+
+.task input[type="checkbox"] {
+  transform: scale(1.2);
+  margin-right: 8px;
+  accent-color: #27ae60;
+}
+
+.task label {
+  display: flex;
+  align-items: center;
+  color: #2E7D5A;
+  font-weight: 600;
+}
+
+.add-task {
+  background: #1B7A4A;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s, transform 0.2s ease;
+  font-family: 'Playfair Display', serif;
+  margin-top: 30px;
+}
+
+.add-task:hover {
+  background: #2ECC71;
+  transform: scale(1.05);
+}
+
+.reminder {
+  color: #e74c3c;
+  font-weight: bold;
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.completed {
+  text-decoration: line-through;
+  color: #a0a0a0;
+}
+
+/* Delete Button */
+.delete-task {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.3s;
+  font-family: 'Playfair Display', serif;
+}
+
+.delete-task:hover {
+  background: #ff6b6b;
+}
+
+/* Animations */
+@keyframes fadeSlideUp {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Daily To-Do Notes</h1>
+  <div class="subtitle">Organize your goals beautifully 🌿</div>
+  <div id="dateLabel" class="date-label"></div>
+</header>
+
+<div class="tasks-container" id="tasksContainer"></div>
+<button class="add-task" id="addTaskBtn">+ Add Task</button>
+
+<script>
+const tasksContainer = document.getElementById('tasksContainer');
+const addTaskBtn = document.getElementById('addTaskBtn');
+const dateLabel = document.getElementById('dateLabel');
+
+const today = new Date().toISOString().split('T')[0];
+dateLabel.textContent = today;
+
+let notesData = JSON.parse(localStorage.getItem('notesData')) || {};
+if (!notesData[today]) notesData[today] = [];
+
+function saveData() {
+  localStorage.setItem('notesData', JSON.stringify(notesData));
+}
+
+function renderAllTasks() {
+  tasksContainer.innerHTML = '';
+  notesData[today].forEach(taskData => renderTask(taskData));
+}
+
+function addTask() {
+  const taskData = { text: '', time: '', comments: '', completed: false };
+  notesData[today].push(taskData);
+  saveData();
+  renderTask(taskData);
+}
+
+function renderTask(taskData) {
+  const task = document.createElement('div');
+  task.className = 'task';
+  task.innerHTML = `
+    <label>
+      <input type="checkbox" ${taskData.completed ? 'checked' : ''}>
+      <input type="text" placeholder="Task description" value="${taskData.text}">
+    </label>
+    <input type="time" class="time-input" value="${taskData.time}">
+    <textarea placeholder="Add comments...">${taskData.comments}</textarea>
+    <div class="reminder"></div>
+    <button class="delete-task">🗑️ Delete</button>
+  `;
+
+  const checkbox = task.querySelector('input[type="checkbox"]');
+  const textInput = task.querySelector('input[type="text"]');
+  const timeInput = task.querySelector('.time-input');
+  const commentsInput = task.querySelector('textarea');
+  const reminderDiv = task.querySelector('.reminder');
+  const deleteBtn = task.querySelector('.delete-task');
+
+  if (taskData.completed) textInput.classList.add('completed');
+
+  checkbox.addEventListener('change', () => {
+    taskData.completed = checkbox.checked;
+    textInput.classList.toggle('completed', taskData.completed);
+    saveData();
+  });
+
+  textInput.addEventListener('input', () => {
+    taskData.text = textInput.value;
+    saveData();
+  });
+
+  commentsInput.addEventListener('input', () => {
+    taskData.comments = commentsInput.value;
+    saveData();
+  });
+
+  timeInput.addEventListener('change', () => {
+    taskData.time = timeInput.value;
+    saveData();
+
+    const now = new Date();
+    const [hours, minutes] = timeInput.value.split(':').map(Number);
+    const reminderTime = new Date();
+    reminderTime.setHours(hours);
+    reminderTime.setMinutes(minutes);
+    reminderTime.setSeconds(0);
+
+    const msUntilReminder = reminderTime - now;
+    if (msUntilReminder > 0) {
+      setTimeout(() => {
+        reminderDiv.textContent = '⏰ Time is up for this task!';
+        alert('Reminder: Time is up for one of your tasks!');
+      }, msUntilReminder);
+    }
+  });
+
+  deleteBtn.addEventListener('click', () => {
+    if (confirm('Delete this task?')) {
+      const index = notesData[today].indexOf(taskData);
+      if (index > -1) {
+        notesData[today].splice(index, 1);
+        saveData();
+        task.remove();
+      }
+    }
+  });
+
+  // Expand / collapse on click
+  task.addEventListener('click', (e) => {
+    if (!['INPUT', 'TEXTAREA', 'BUTTON', 'LABEL'].includes(e.target.tagName)) {
+      task.classList.toggle('expanded');
+    }
+  });
+
+  tasksContainer.appendChild(task);
+}
+
+addTaskBtn.addEventListener('click', addTask);
+renderAllTasks();
+</script>
+</body>
+</html>
